@@ -1,3 +1,3 @@
 # ValueValidation
 
-Validate the correctness of every transaction of .xml
+Validate the correctness of every transaction in .xml files
