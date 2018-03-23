@@ -76,7 +76,7 @@ def parse_pairTag(datalines,lineStIdx,lineLtd,tagStr):
                 ## error happens when the searching range reaches the specified limited 
                 #if taglineSt+taglineRange >=len(datalines):
                 if taglineRange >= lineLtd- (taglineSt - lineStIdx):
-                    print ('ending not found {}'.format(taglineRange))
+                    #print ('ending not found {}'.format(taglineRange))
                     return [0, -1]
             #print datalines[taglineSt+taglineRange]
             break  ## pair tag match  
@@ -116,7 +116,7 @@ def get_data_amount(datalines, dataTagName, lineNo, lineRange):
     dataTagRange = parse_pairTag(datalines,lineNo,lineRange,dataTagName)
     
     ## find the locations of the given dataTagName pairs, result stored in dataTagRange
-    if (dataTagRange[0]):
+    if (dataTagRange[0]>0):
         ## get the value within the tag
         dataAMount = parse_Tag2Value(datalines, dataTagRange[0]+1, dataTagRange[1]-1)
         ## only non-negative value is acceptable
@@ -159,7 +159,7 @@ def parse_amount(path, fname):
             RemainBalanceTagResult, leftAmount, lineNo, transRowsLeft = \
                 get_data_amount(datalines, 'RemainBalanceField', lineNo, len(datalines))
 
-            if (RemainBalanceTagResult[0] == 0):
+            if ((RemainBalanceTagResult[0] < 1) or (RemainBalanceTagResult[1] < 1)):
                 return ("RemainBalance tag error.")
             
             ## looping to find transaction entries 
@@ -189,22 +189,28 @@ def parse_amount(path, fname):
                     #print (">>WithdrawalField transRowsLeft: {} {}".format(lineNo,transRowsLeft))  
                     withdrawalTagResult, withdrawalAmount, lineNo, transRowsLeft = get_data_amount(datalines, 'WithdrawalField', lineNo, transRowsLeft)    
                     ## when the withdrawalAmount is negative, it means something wrong with the value string
-                    if withdrawalAmount == -1:
+                    if (withdrawalTagResult[0] == -1) or (withdrawalTagResult[1] == -1):
                         return 'WithdrawalField tag pair error {}'.format(lineNo+transRowsLeft-1)
+                    elif withdrawalAmount == -1:
+                        return 'WithdrawalField value error {}'.format(lineNo+transRowsLeft-1)
                     
                     ## get the value of deposit, could be null
                     #print (">>DepositField transRowsLeft:{} {}".format(lineNo,transRowsLeft))        
                     depositTagResult, depositAmount, lineNo, transRowsLeft = get_data_amount(datalines, 'DepositField', lineNo, transRowsLeft)    
                     ## when the depositAmount is negative, it means something wrong with the value string
-                    if depositAmount == -1:
-                        return 'depositAmount tag pair error {}'.format(lineNo+transRowsLeft-1)
+                    if (depositTagResult[0] == -1) or (depositTagResult[1] == -1):
+                        return 'DepositField tag pair error {}'.format(lineNo+transRowsLeft-1)
+                    elif depositAmount == -1:
+                        return 'DepositField value error {}'.format(lineNo+transRowsLeft-1)
  
                     ## get the value of balance
                     #print (">>BalanceField transRowsLeft:{} {}".format(lineNo,transRowsLeft))
                     balanceTagResult, balanceAmount, lineNo, transRowsLeft = get_data_amount(datalines, 'BalanceField', lineNo, transRowsLeft)    
                     ## when the balanceAmount is negative, it means something wrong with the value string
-                    if balanceAmount == -1:
-                        return 'balanceAmount tag pair error {}'.format(lineNo+transRowsLeft-1)
+                    if (balanceTagResult[0] == -1) or (balanceTagResult[1] == -1):
+                        return 'BalanceField tag pair error {}'.format(lineNo+transRowsLeft-1)
+                    elif balanceAmount == -1:
+                        return 'BalanceField value error {}'.format(lineNo+transRowsLeft-1)
 
                     ## either deposit or withdrawal must be found, and balance cannot be null,
                     ## or any of the ending tag must not exceed the boundary of this transaction,
@@ -217,7 +223,7 @@ def parse_amount(path, fname):
 
                     ## either of which must have value
                     if (depositAmount==0 and withdrawalAmount==0):
-                        return 'Transaction No.{}: Deposit{} or Withdrawal{} value error'.format(transNo,depositAmount,withdrawalAmount )
+                        return 'Transaction No.{}: Deposit or Withdrawal value error'.format(transNo)
 
                     ## examine value logical correctness
                     if (leftAmount + depositAmount - withdrawalAmount != balanceAmount):
